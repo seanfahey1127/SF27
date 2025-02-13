@@ -191,17 +191,46 @@ from  cbsa
 
 --     b. Which cbsa has the largest combined population? Which has the smallest? Report the CBSA name and total population.
 
+-- Answer: largest: 	CBSA name: Memphis, TN-MS-AR 
+-- 						total population: 937847
+--		   smallest: 	CBSA name: Nashville-Davidson-Mufreesboro-Franklin, TN
+-- 						total population: 8773
+
+
 
 select 
 *
 from cbsa c
 inner join population u
+	on c.fipscounty = u.fipscounty
+order by u.population desc	
 
+
+select 
+*
+from cbsa c
+inner join population u
+	on c.fipscounty = u.fipscounty
+order by u.population 	
 
 
 
 
 --     c. What is the largest (in terms of population) county which is not included in a CBSA? Report the county name and population.
+
+-- Answer: Shelby county, population: 937847
+
+
+
+select 
+*
+from population u
+inner join fips_county f 
+	on u.fipscounty = f.fipscounty
+order by u.population desc 	
+
+
+
 
 -- 6. 
 --     a. Find all rows in the prescription table where total_claims is at least 3000. Report the drug_name and the total_claim_count.
