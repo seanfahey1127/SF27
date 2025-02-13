@@ -4,12 +4,23 @@
 
 select 
 	r.npi,
+	max(n.total_claim_count) max_claim_count
+from prescriber r
+join prescription n
+		on r.npi = n.npi 
+where total_claim_count is not null
+group by r.npi
+order by max_claim_count desc 
+
+
+select distinct 
+	r.npi,
 	n.total_claim_count
 from prescriber r
-left join prescription n
+join prescription n
 		on r.npi = n.npi 
 where total_claim_count is not null		
-order by n.total_claim_count desc 		
+order by n.total_claim_count desc 	
 
 
 -- Answer: npi=1912011792, 4538 number of claims
@@ -21,16 +32,25 @@ order by n.total_claim_count desc
 
 
 select 
-	r.npi,
-	r.nppes_provider_last_org_name,
 	r.nppes_provider_first_name,
+	r.nppes_provider_last_org_name,
 	r.specialty_description,
 	n.total_claim_count
 from prescriber r
 left join prescription n
 		on r.npi = n.npi 
-where total_claim_count is not null		
+where total_claim_count is not null
 order by n.total_claim_count desc 	
+
+
+select distinct
+	r.nppes_provider_first_name,
+	r.nppes_provider_last_org_name,
+	r.specialty_description
+from prescriber r
+left join prescription n
+		on r.npi = n.npi
+
 
 
 
@@ -40,10 +60,41 @@ order by n.total_claim_count desc
 --     a. Which specialty had the most total number of claims (totaled over all drugs)?
 
 
+select 
+	count(n.total_claim_count) total_claims,
+	r.specialty_description
+from prescriber r
+inner join prescription n 
+	on r.npi = n.npi 
+group by r.specialty_description	
+order by total_claims desc
+
+
+
+-- Answer: Nurse Practitioner 
 
 
 
 --     b. Which specialty had the most total number of claims for opioids?
+
+
+select 
+	r.specialty_description,
+	count(*) specialty_count
+from prescriber r 
+inner join prescription n
+	on r.npi = n.npi 
+inner join drug d
+	on n.drug_name = d.drug_name
+where opioid_drug_flag = 'Y' 
+	and long_acting_opioid_drug_flag = 'Y'
+group by r.specialty_description
+order by specialty_count desc 
+
+
+-- Answer: Nurse Practioner 
+
+
 
 --     c. **Challenge Question:** Are there any specialties that appear in the prescriber table that have no associated prescriptions in the prescription table?
 
@@ -52,17 +103,103 @@ order by n.total_claim_count desc
 -- 3. 
 --     a. Which drug (generic_name) had the highest total drug cost?
 
+select 
+	d.generic_name,
+	n.total_drug_cost
+from drug d 
+inner join prescription n
+	on d.drug_name = n.drug_name
+order by n.total_drug_cost desc	
+
+
+-- Answer: Pirfenidone
+
+
+
 --     b. Which drug (generic_name) has the hightest total cost per day? **Bonus: Round your cost per day column to 2 decimal places. Google ROUND to see how this works.**
+
+select 
+	d.generic_name,
+	round(n.total_drug_cost / n.total_day_supply, 2) cost_per_day
+from prescription n 
+inner join drug d 
+	on d.drug_name = n.drug_name
+order by cost_per_day desc
+
+-- Answer: Immun Glob
+
+
+
 
 -- 4. 
 --     a. For each drug in the drug table, return the drug name and then a column named 'drug_type' which says 'opioid' for drugs which have opioid_drug_flag = 'Y', says 'antibiotic' for those drugs which have antibiotic_drug_flag = 'Y', and says 'neither' for all other drugs. **Hint:** You may want to use a CASE expression for this. See https://www.postgresqltutorial.com/postgresql-tutorial/postgresql-case/ 
 
+
+select 
+	drug_name,
+	case 
+		when opioid_drug_flag = 'Y' then 'opioid'
+		when long_acting_opioid_drug_flag = 'Y' then 'opioid'
+		when antibiotic_drug_flag = 'Y' then 'antibiotic'
+		else 'neither'
+	end as drug_type
+from drug 
+
+
+
+
+
+
 --     b. Building off of the query you wrote for part a, determine whether more was spent (total_drug_cost) on opioids or on antibiotics. Hint: Format the total costs as MONEY for easier comparision.
+
+
+select 
+	case 
+		when d.opioid_drug_flag = 'Y' then 'opioid'
+		when d.long_acting_opioid_drug_flag = 'Y' then 'opioid'
+		when d.antibiotic_drug_flag = 'Y' then 'antibiotic'
+		else 'neither'
+	end as drug_type,
+	cast(sum(n.total_drug_cost) as money) as total_spent
+from prescription n
+inner join drug d 
+	on d.drug_name = n.drug_name
+where d.opioid_drug_flag = 'Y' or d.long_acting_opioid_drug_flag = 'Y' or d.antibiotic_drug_flag = 'Y'
+group by drug_type
+order by total_spent desc
+
+
+
+
 
 -- 5. 
 --     a. How many CBSAs are in Tennessee? **Warning:** The cbsa table contains information for all states, not just Tennessee.
 
+-- Answer: 33
+
+select 
+count(cbsaname)
+from  cbsa
+where cbsaname like '%, TN'
+
+
+
+select 
+*
+from  cbsa
+
+
 --     b. Which cbsa has the largest combined population? Which has the smallest? Report the CBSA name and total population.
+
+
+select 
+*
+from cbsa c
+inner join population u
+
+
+
+
 
 --     c. What is the largest (in terms of population) county which is not included in a CBSA? Report the county name and population.
 
