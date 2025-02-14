@@ -66,16 +66,15 @@ limit 1;
 
 select 
 	r.specialty_description,
-	count(*) specialty_count
+	sum(n.total_claim_count) total_claim_count
 from prescriber r 
 inner join prescription n
 	on r.npi = n.npi 
 inner join drug d
 	on n.drug_name = d.drug_name
 where opioid_drug_flag = 'Y' 
-	and long_acting_opioid_drug_flag = 'Y'
 group by r.specialty_description
-order by specialty_count desc 
+order by total_claim_count desc 
 
 
 -- Answer: Nurse Practioner 
@@ -91,14 +90,15 @@ order by specialty_count desc
 
 select 
 	d.generic_name,
-	n.total_drug_cost
+	sum(n.total_drug_cost) total_drug_cost
 from drug d 
 inner join prescription n
 	on d.drug_name = n.drug_name
-order by n.total_drug_cost desc	
+group by d.generic_name	
+order by total_drug_cost desc	
 
 
--- Answer: Pirfenidone
+-- Answer: INSULIN GLARGINE,HUM.REC.ANALOG
 
 
 
@@ -106,13 +106,16 @@ order by n.total_drug_cost desc
 
 select 
 	d.generic_name,
-	round(n.total_drug_cost / n.total_day_supply, 2) cost_per_day
+	round(sum(n.total_drug_cost) / nullif(sum(total_day_supply), 0), 2) cost_per_day
 from prescription n 
 inner join drug d 
 	on d.drug_name = n.drug_name
+where n.total_day_supply > 0
+group by d.generic_name
 order by cost_per_day desc
 
--- Answer: Immun Glob
+-- Answer: C1 ESTERASE INHIBITOR
+
 
 
 
@@ -161,59 +164,88 @@ order by total_spent desc
 -- 5. 
 --     a. How many CBSAs are in Tennessee? **Warning:** The cbsa table contains information for all states, not just Tennessee.
 
--- Answer: 33
+-- Answer: 42
 
 select 
-count(cbsaname)
-from  cbsa c
-left join
-where cbsaname like '%, TN'
+count(*)
+from cbsa c
+join fips_county f
+on c.fipscounty = f.fipscounty
+where f.state = 'TN';
+
+
+
 
 
 
 select 
-*
-from  cbsa
+f.fipscounty,
+f.state,
+count(c.cbsaname) cbsa_name
+from cbsa c
+inner join fips_county f
+	on c.fipscounty = f.fipscounty
+where c.cbsaname like '%, TN%'
+or c.cbsaname like '% TN%'
+and c.cbsaname not like '%-TN%'
+and c.cbsaname not like '%TN-%'
+group by f.fipscounty, f.state
+order by cbsa_name
+
+
+
+
+
 
 
 --     b. Which cbsa has the largest combined population? Which has the smallest? Report the CBSA name and total population.
 
--- Answer: largest: 	CBSA name: Memphis, TN-MS-AR 
--- 						total population: 937847
---		   smallest: 	CBSA name: Nashville-Davidson-Mufreesboro-Franklin, TN
--- 						total population: 8773
-
-
-
-select 
-*
-from cbsa c
-inner join population u
-	on c.fipscounty = u.fipscounty
-order by u.population desc	
+-- Answer: largest: 	CBSA name: Nashville-Davidson-Mufreesboro-Franklin, TN
+-- 						total population: 1,830,410
+--		   smallest: 	CBSA name: Morris, Town
+-- 						total population: 116,352
 
 
 select 
-*
+c.cbsaname,
+sum(u.population) total_population 
 from cbsa c
 inner join population u
 	on c.fipscounty = u.fipscounty
-order by u.population 	
+group by c.cbsaname
+order by total_population desc
+limit 1;
+
+select 
+c.cbsaname,
+sum(u.population) total_population 
+from cbsa c
+inner join population u
+	on c.fipscounty = u.fipscounty
+group by c.cbsaname
+order by total_population 
+limit 1;
+
+
 
 
 
 
 --     c. What is the largest (in terms of population) county which is not included in a CBSA? Report the county name and population.
 
--- Answer: Shelby county, population: 937847
+-- Answer: Sevier, 95,523
 
 
 
 select 
-*
+f.county,
+u.population
 from population u
 inner join fips_county f 
 	on u.fipscounty = f.fipscounty
+left join cbsa c 
+	on u.fipscounty = c.fipscounty
+where c.fipscounty is null 	
 order by u.population desc 	
 
 
@@ -224,43 +256,41 @@ order by u.population desc
 
 select 
 	drug_name,
-	total_claim_count total_claims
+	total_claim_count 
 from prescription 	
-where total_claim_count > 3000
-order by total_claims desc
+where total_claim_count >= 3000
+order by total_claim_count desc
 
 
 --     b. For each instance that you found in part a, add a column that indicates whether the drug is an opioid.
 
 select 
 	n.drug_name,
-	n.total_claim_count total_claims,
-	d.opioid_drug_flag,
-	d.long_acting_opioid_drug_flag
+	n.total_claim_count total_claim_count,
+	d.opioid_drug_flag
 from prescription n	
-inner join drug d 
+left join drug d 
 	on n.drug_name = d.drug_name
-where total_claim_count > 3000
-order by total_claims desc
+where total_claim_count >= 3000
+order by n.drug_name
 
 
 
 --     c. Add another column to you answer from the previous part which gives the prescriber first and last name associated with each row.
 
 select 
-	n.drug_name,
-	n.total_claim_count total_claims,
-	d.opioid_drug_flag,
-	d.long_acting_opioid_drug_flag,
 	r.nppes_provider_first_name,
-	r.nppes_provider_last_org_name
+	r.nppes_provider_last_org_name,
+	n.drug_name,
+	n.total_claim_count total_claim_count,
+	d.opioid_drug_flag
 from prescription n	
 inner join drug d 
 	on n.drug_name = d.drug_name
 inner join prescriber r 
 	on n.npi = r.npi
-where total_claim_count > 3000
-order by total_claims desc
+where total_claim_count >= 3000
+
 
 
 
@@ -272,14 +302,9 @@ order by total_claims desc
 
 
 select 
-r.specialty_description, 
-r.nppes_provider_city, 
-d.opioid_drug_flag
-from prescriber r
-inner join prescription n
-	on r.npi = n.npi
-inner join drug d 	
-	on n.drug_name = d.drug_name
+r.npi, 
+d.drug_name
+from drug d, prescriber r
 where r.specialty_description = 'Pain Management'	
 and r.nppes_provider_city = 'NASHVILLE'
 and d.opioid_drug_flag = 'Y'
@@ -290,18 +315,20 @@ and d.opioid_drug_flag = 'Y'
 --     b. Next, report the number of claims per drug per prescriber. Be sure to include all combinations, whether or not the prescriber had any claims. You should report the npi, the drug name, and the number of claims (total_claim_count).
 
 
-
-
 select 
-r.npi, 
+r.npi,
 d.drug_name,
-coalesce(n.total_claim_count, 0) total_claim_count
+coalesce(sum(n.total_claim_count), 0) coalesce
 from prescriber r
 cross join drug d 	
 left join prescription n
 	on r.npi = n.npi
 	and d.drug_name = n.drug_name
-limit 10000
+where r.specialty_description = 'Pain Management'	
+and r.nppes_provider_city = 'NASHVILLE'
+and d.opioid_drug_flag = 'Y'
+group by r.npi, d.drug_name
+
 
 
 
