@@ -2,29 +2,21 @@
 --     a. Which prescriber had the highest total number of claims (totaled over all drugs)? Report the npi and the total number of claims.
 
 
+
+
+
+-- Answer: 1881634483, 99707 number of claims
+
+
 select 
 	r.npi,
-	max(n.total_claim_count) max_claim_count
+	sum(n.total_claim_count) total_claim_count
 from prescriber r
-join prescription n
-		on r.npi = n.npi 
-where total_claim_count is not null
+join prescription n 
+on r.npi = n.npi 
 group by r.npi
-order by max_claim_count desc 
-
-
-select distinct 
-	r.npi,
-	n.total_claim_count
-from prescriber r
-join prescription n
-		on r.npi = n.npi 
-where total_claim_count is not null		
-order by n.total_claim_count desc 	
-
-
--- Answer: npi=1912011792, 4538 number of claims
-
+order by total_claim_count desc
+limit 1;
 
 
 
@@ -32,24 +24,17 @@ order by n.total_claim_count desc
 
 
 select 
+	r.npi,
 	r.nppes_provider_first_name,
 	r.nppes_provider_last_org_name,
 	r.specialty_description,
-	n.total_claim_count
+	sum(n.total_claim_count) total_claim_count
 from prescriber r
-left join prescription n
-		on r.npi = n.npi 
-where total_claim_count is not null
-order by n.total_claim_count desc 	
-
-
-select distinct
-	r.nppes_provider_first_name,
-	r.nppes_provider_last_org_name,
-	r.specialty_description
-from prescriber r
-left join prescription n
-		on r.npi = n.npi
+join prescription n 
+on r.npi = n.npi 
+group by r.npi, r.nppes_provider_first_name, r.nppes_provider_last_org_name, r.specialty_description
+order by total_claim_count desc
+limit 1;
 
 
 
@@ -61,17 +46,18 @@ left join prescription n
 
 
 select 
-	count(n.total_claim_count) total_claims,
-	r.specialty_description
+	r.specialty_description,
+	sum(n.total_claim_count) total_claim_count
 from prescriber r
-inner join prescription n 
+join prescription n 
 	on r.npi = n.npi 
 group by r.specialty_description	
-order by total_claims desc
+order by total_claim_count desc
+limit 1;
 
 
 
--- Answer: Nurse Practitioner 
+-- Answer: Family Practice
 
 
 
@@ -179,7 +165,8 @@ order by total_spent desc
 
 select 
 count(cbsaname)
-from  cbsa
+from  cbsa c
+left join
 where cbsaname like '%, TN'
 
 
@@ -235,14 +222,87 @@ order by u.population desc
 -- 6. 
 --     a. Find all rows in the prescription table where total_claims is at least 3000. Report the drug_name and the total_claim_count.
 
+select 
+	drug_name,
+	total_claim_count total_claims
+from prescription 	
+where total_claim_count > 3000
+order by total_claims desc
+
+
 --     b. For each instance that you found in part a, add a column that indicates whether the drug is an opioid.
+
+select 
+	n.drug_name,
+	n.total_claim_count total_claims,
+	d.opioid_drug_flag,
+	d.long_acting_opioid_drug_flag
+from prescription n	
+inner join drug d 
+	on n.drug_name = d.drug_name
+where total_claim_count > 3000
+order by total_claims desc
+
+
 
 --     c. Add another column to you answer from the previous part which gives the prescriber first and last name associated with each row.
 
+select 
+	n.drug_name,
+	n.total_claim_count total_claims,
+	d.opioid_drug_flag,
+	d.long_acting_opioid_drug_flag,
+	r.nppes_provider_first_name,
+	r.nppes_provider_last_org_name
+from prescription n	
+inner join drug d 
+	on n.drug_name = d.drug_name
+inner join prescriber r 
+	on n.npi = r.npi
+where total_claim_count > 3000
+order by total_claims desc
+
+
+
+
 -- 7. The goal of this exercise is to generate a full list of all pain management specialists in Nashville and the number of claims they had for each opioid. **Hint:** The results from all 3 parts will have 637 rows.
+
 
 --     a. First, create a list of all npi/drug_name combinations for pain management specialists (specialty_description = 'Pain Management) in the city of Nashville (nppes_provider_city = 'NASHVILLE'), where the drug is an opioid (opiod_drug_flag = 'Y'). **Warning:** Double-check your query before running it. You will only need to use the prescriber and drug tables since you don't need the claims numbers yet.
 
+
+select 
+r.specialty_description, 
+r.nppes_provider_city, 
+d.opioid_drug_flag
+from prescriber r
+inner join prescription n
+	on r.npi = n.npi
+inner join drug d 	
+	on n.drug_name = d.drug_name
+where r.specialty_description = 'Pain Management'	
+and r.nppes_provider_city = 'NASHVILLE'
+and d.opioid_drug_flag = 'Y'
+
+
+
+
 --     b. Next, report the number of claims per drug per prescriber. Be sure to include all combinations, whether or not the prescriber had any claims. You should report the npi, the drug name, and the number of claims (total_claim_count).
-    
+
+
+
+
+select 
+r.npi, 
+d.drug_name,
+coalesce(n.total_claim_count, 0) total_claim_count
+from prescriber r
+cross join drug d 	
+left join prescription n
+	on r.npi = n.npi
+	and d.drug_name = n.drug_name
+limit 10000
+
+
+
 --     c. Finally, if you have not done so already, fill in any missing values for total_claim_count with 0. Hint - Google the COALESCE function.
