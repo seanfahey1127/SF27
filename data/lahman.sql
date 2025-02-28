@@ -1,6 +1,6 @@
 -- 1. What range of years for baseball games played does the provided database cover? 
 
--- Answer: 1871-2016, 145 years
+-- Answer: 1871-2016, 146 years
 
 select table_name, column_name 
 from information_schema.columns
@@ -141,12 +141,219 @@ group by sp.namefirst, sp.namelast, sp.height, t.name;
 
 
 -- 3. Find all players in the database who played at Vanderbilt University. Create a list showing each player’s first and last names as well as the total salary they earned in the major leagues. Sort this list in descending order by the total salary earned. Which Vanderbilt player earned the most money in the majors?
-	
+
+-- Answer : David Price
+
+select *
+from schools
+where schoolname = 'Vanderbilt University'
+
+
+select distinct(playerid) 
+from collegeplaying
+where schoolid = 'vandy' 
+
+
+select *
+from salaries 
+order by salary desc 
+
+select 
+	p.namefirst, p.namelast, s.yearid, sum(s.salary) total_salary
+from people p
+inner join collegeplaying c 
+	on p.playerid = c.playerid
+inner join schools sch 
+	on c.schoolid = sch.schoolid
+inner join salaries s
+	on p.playerid = c.playerid
+where sch.schoolname = 'Vanderbilt University'
+and s.lgid in ('AL', 'NL')
+group by p.namefirst, p.namelast, s.yearid
+order by total_salary desc;
+
+select distinct 
+lgid
+from salaries;
+
+select * 
+from salaries
+order by salary DESC
+limit 10;
+
+select * 
+from schools
+where schoolname ILIKE '%vanderbilt%';
+
+select *
+from collegeplaying 
+where schoolid IN
+(select schoolid 
+from schools
+where schoolname ILIKE '%vanderbilt%')
+
+select * 
+from salaries 
+where playerid = 'priceda01';
+
+
+select 
+	p.namefirst, p.namelast
+from people p
+inner join collegeplaying c 
+	on p.playerid = c.playerid
+inner join schools sch 
+	on c.schoolid = sch.schoolid
+inner join salaries s
+	on p.playerid = s.playerid
+where sch.schoolname ILIKE '%vanderbilt%'
+and s.lgid in ('AL', 'NL')
+group by p.namefirst, p.namelast
+order by p.namelast;
+
+
+
+select 
+	p.namefirst, p.namelast, sum(distinct s.salary) total_salary
+from people p
+inner join collegeplaying c 
+	on p.playerid = c.playerid
+inner join schools sch 
+	on c.schoolid = sch.schoolid
+inner join salaries s
+	on p.playerid = s.playerid
+where sch.schoolname ILIKE '%vanderbilt%'
+and s.lgid in ('AL', 'NL')
+group by p.namefirst, p.namelast
+order by total_salary desc;
+
+
 
 -- 4. Using the fielding table, group players into three groups based on their position: label players with position OF as "Outfield", those with position "SS", "1B", "2B", and "3B" as "Infield", and those with position "P" or "C" as "Battery". Determine the number of putouts made by each of these three groups in 2016.
-   
+
+select *
+from fielding
+where yearid = '2016'
+
+
+select 
+	p.namefirst, p.namelast, f.teamid,
+	case 
+		when f.pos = 'OF' then 'Outfield'
+		when f.pos in ('SS', '1B', '2B', '3B') then 'Infield'
+		when f.pos in ('P', 'C') then 'Battery'
+	end as position_group,
+	sum(f.po) as total_putouts
+from fielding f
+inner join people p on f.playerid = p.playerid
+where f.yearid = 2016
+group by p.namefirst, p.namelast, f.teamid, position_group
+order by total_putouts desc; 
+
+
+select 
+	case 
+		when pos = 'OF' then 'Outfield'
+		when pos in ('SS', '1B', '2B', '3B') then 'Infield'
+		when pos in ('P', 'C') then 'Battery'
+	end as position_group,
+	sum(po) as total_putouts
+from fielding 
+where yearid = 2016
+group by position_group
+order by total_putouts desc; 
+
+
 -- 5. Find the average number of strikeouts per game by decade since 1920. Round the numbers you report to 2 decimal places. Do the same for home runs per game. Do you see any trends?
-   
+
+
+select yearid, playerid, so, g
+from pitching
+where yearid >= 1920
+limit 500;
+
+select yearid, playerid, hr, g
+from batting
+where yearid >= 1920
+limit 500;
+
+
+
+select 
+	(floor(yearid / 10) * 10) as decade,
+	round(avg(case 
+		when so > 0 and g > 0 then so / nullif(g, 0)
+		else null end), 2) as avg_so,
+	round(avg(case
+		when hr > 0 and g > 0 then hr / nullif(g, 0)
+		else null end), 2) as avg_hr
+from (
+	select
+		p.yearid, p.so, p.g, null as hr
+	from pitching p
+	where p.yearid >= 1920 and p.so > 0 and p.g > 0
+	union all
+	select
+		b.yearid, null as so, b.g, b.hr
+	from batting b 
+	where b.yearid >= 1920 and b.hr > 0 and b.g > 0
+) as combined_stats
+group by decade
+order by decade;
+
+
+select yearid, playerid, so, G
+from pitching
+where yearid >= 1920 
+and so is not null
+and g > 0
+limit 100;
+
+select yearid, playerid, hr, G
+from batting
+where yearid >= 1920 
+and hr is not null
+and g > 0
+limit 100;
+
+select
+    p.yearid,
+	p.playerid,
+    p.so as strikeouts,
+    p.G as games_played,
+    b.hr as homeruns,
+    b.G as games_played_batting
+from pitching p
+left join batting b on p.playerid = b.playerid and p.yearid = b.yearid
+where p.yearid = 2016 
+
+
+
+select 
+	(floor(p.yearid / 10) * 10) as decade,
+	round(avg(case 
+		when p.so > 0 and p.g > 0 then p.so / nullif(p.g, 0)
+		else null end), 2) as avg_so,
+	round(avg(case
+		when b.hr > 0 and b.g > 0 then b.hr / nullif(b.g, 0)
+		else null end), 2) as avg_hr
+from pitching p
+left join batting b on p.playerid = b.playerid and p.yearid = b.yearid 
+where p.yearid >= 1920 and b.hr > 0 and 
+group by decade
+order by decade;
+		
+select playerid, yearid, hr, g, hr / nullif(g, 0) as hr_per_game
+from batting
+where hr > 0 and g > 0
+order by hr desc
+limit 1000;
+
+select count(*)
+from batting
+where hr > 0 and g > 0;
+
+
 
 -- 6. Find the player who had the most success stealing bases in 2016, where __success__ is measured as the percentage of stolen base attempts which are successful. (A stolen base attempt results either in a stolen base or being caught stealing.) Consider only players who attempted _at least_ 20 stolen bases.
 	
