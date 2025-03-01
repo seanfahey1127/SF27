@@ -17,112 +17,6 @@ from teams;
 
 -- Answer: Eddie Gaedel, 43, 1 game, St. Louis Browns
 
-select 
-	*
-from people
-where height is not null
-order by height 
-limit 1;
-
-select 
-	namefirst, namelast, namegiven, playerid, retroid, bbrefid, birthcity,			
-	birthstate, birthcountry, birthyear, deathyear, weight, height, bats, throws, debut, finalgame
-from people
-where height is not null
-order by height 
-limit 1;
-
-
-
-select distinct 
-	p.namefirst, p.namelast, p.namegiven, b.teamid, pt.yearid, b.yearid, f.yearid, p.playerid, p.retroid, p.bbrefid
-from people p
-inner join batting b 
-on p.playerid = b.playerid
-inner join pitching pt
-on p.playerid = pt.playerid
-inner join fielding f
-on p.playerid = f.playerid
-order by b.yearid desc; 
-
-select distinct 
-	 p.namefirst, p.namelast, p.namegiven, 
-	 coalesce(b.teamid, pt.teamid, f.teamid, a.teamid) teamid,
-	 coalesce(b.yearid, pt.yearid, f.yearid, a.yearid) yearid,
-	 p.playerid, p.retroid, p.bbrefid
-from people p
-left join batting b 
-	on p.playerid = b.playerid
-left join pitching pt
-	on p.playerid = pt.playerid and b.yearid = pt.yearid
-left join fielding f on p.playerid = f.playerid and b.yearid = f.yearid 
-left join appearances a on p.playerid = a.playerid and b.yearid = a.yearid
-order by yearid desc; 
-
-
-with most_played_team as (
-	select playerid, yearid, teamid
-	from appearances 
-	where g_all = (
-		select max(g_all)
-		from appearances a2
-		where a2.playerid = appearances.playerid
-		and a2.yearid = appearances.yearid 
-	)
-)
-select distinct 
-	 p.namefirst, p.namelast, p.namegiven, 
-	 coalesce(b.teamid, pt.teamid, f.teamid, mpt.teamid) teamid,
-	 coalesce(b.yearid, pt.yearid, f.yearid, mpt.yearid) yearid,
-	 p.playerid, p.retroid, p.bbrefid
-from people p
-left join batting b 
-	on p.playerid = b.playerid
-left join pitching pt 
-	on p.playerid = pt.playerid 
-	and b.yearid = pt.yearid
-left join fielding f 
-	on p.playerid = f.playerid 
-	and b.yearid = f.yearid 
-left join most_played_team mpt 
-	on p.playerid = mpt.playerid 
-	and coalesce(b.yearid, pt.yearid, f.yearid) = mpt.yearid
-where coalesce(b.teamid, pt.teamid, f.teamid, mpt.teamid) is not null
-order by coalesce(b.yearid, pt.yearid, f.yearid, mpt.yearid) desc
-
-
-with most_played_team as (
-	select playerid, yearid, teamid
-	from appearances 
-	where g_all = (
-		select max(g_all)
-		from appearances a2
-		where a2.playerid = appearances.playerid
-		and a2.yearid = appearances.yearid 
-	)
-)
-select distinct 
-	 p.namefirst, p.namelast, p.namegiven, p.height,
-	 coalesce(b.teamid, pt.teamid, f.teamid, mpt.teamid) teamid,
-	 coalesce(b.yearid, pt.yearid, f.yearid, mpt.yearid) yearid,
-	 p.playerid, p.retroid, p.bbrefid
-from people p
-left join batting b 
-	on p.playerid = b.playerid
-left join pitching pt 
-	on p.playerid = pt.playerid 
-	and b.yearid = pt.yearid
-left join fielding f 
-	on p.playerid = f.playerid 
-	and b.yearid = f.yearid 
-left join most_played_team mpt 
-	on p.playerid = mpt.playerid 
-	and coalesce(b.yearid, pt.yearid, f.yearid) = mpt.yearid
-where coalesce(b.teamid, pt.teamid, f.teamid, mpt.teamid) is not null
-order by p.height
-
-
-
 with shortest_player as (
     select playerid, namefirst, namelast, height 
     from people 
@@ -144,75 +38,6 @@ group by sp.namefirst, sp.namelast, sp.height, t.name;
 
 -- Answer : David Price
 
-select *
-from schools
-where schoolname = 'Vanderbilt University'
-
-
-select distinct(playerid) 
-from collegeplaying
-where schoolid = 'vandy' 
-
-
-select *
-from salaries 
-order by salary desc 
-
-select 
-	p.namefirst, p.namelast, s.yearid, sum(s.salary) total_salary
-from people p
-inner join collegeplaying c 
-	on p.playerid = c.playerid
-inner join schools sch 
-	on c.schoolid = sch.schoolid
-inner join salaries s
-	on p.playerid = c.playerid
-where sch.schoolname = 'Vanderbilt University'
-and s.lgid in ('AL', 'NL')
-group by p.namefirst, p.namelast, s.yearid
-order by total_salary desc;
-
-select distinct 
-lgid
-from salaries;
-
-select * 
-from salaries
-order by salary DESC
-limit 10;
-
-select * 
-from schools
-where schoolname ILIKE '%vanderbilt%';
-
-select *
-from collegeplaying 
-where schoolid IN
-(select schoolid 
-from schools
-where schoolname ILIKE '%vanderbilt%')
-
-select * 
-from salaries 
-where playerid = 'priceda01';
-
-
-select 
-	p.namefirst, p.namelast
-from people p
-inner join collegeplaying c 
-	on p.playerid = c.playerid
-inner join schools sch 
-	on c.schoolid = sch.schoolid
-inner join salaries s
-	on p.playerid = s.playerid
-where sch.schoolname ILIKE '%vanderbilt%'
-and s.lgid in ('AL', 'NL')
-group by p.namefirst, p.namelast
-order by p.namelast;
-
-
-
 select 
 	p.namefirst, p.namelast, sum(distinct s.salary) total_salary
 from people p
@@ -230,11 +55,6 @@ order by total_salary desc;
 
 
 -- 4. Using the fielding table, group players into three groups based on their position: label players with position OF as "Outfield", those with position "SS", "1B", "2B", and "3B" as "Infield", and those with position "P" or "C" as "Battery". Determine the number of putouts made by each of these three groups in 2016.
-
-select *
-from fielding
-where yearid = '2016'
-
 
 select 
 	p.namefirst, p.namelast, f.teamid,
@@ -266,107 +86,206 @@ order by total_putouts desc;
 
 -- 5. Find the average number of strikeouts per game by decade since 1920. Round the numbers you report to 2 decimal places. Do the same for home runs per game. Do you see any trends?
 
-
-select yearid, playerid, so, g
-from pitching
-where yearid >= 1920
-limit 500;
-
-select yearid, playerid, hr, g
-from batting
-where yearid >= 1920
-limit 500;
-
-
-
 select 
-	(floor(yearid / 10) * 10) as decade,
-	round(avg(case 
-		when so > 0 and g > 0 then so / nullif(g, 0)
-		else null end), 2) as avg_so,
-	round(avg(case
-		when hr > 0 and g > 0 then hr / nullif(g, 0)
-		else null end), 2) as avg_hr
+	floor(yearid / 10) * 10 as decade, 
+	round(avg(lg_so_per_g), 2) as avg_so,
+	round(avg(lg_hr_per_g), 2) as avg_hr
 from (
-	select
-		p.yearid, p.so, p.g, null as hr
-	from pitching p
-	where p.yearid >= 1920 and p.so > 0 and p.g > 0
-	union all
-	select
-		b.yearid, null as so, b.g, b.hr
-	from batting b 
-	where b.yearid >= 1920 and b.hr > 0 and b.g > 0
-) as combined_stats
-group by decade
-order by decade;
-
-
-select yearid, playerid, so, G
-from pitching
-where yearid >= 1920 
-and so is not null
-and g > 0
-limit 100;
-
-select yearid, playerid, hr, G
-from batting
-where yearid >= 1920 
-and hr is not null
-and g > 0
-limit 100;
-
-select
-    p.yearid,
-	p.playerid,
-    p.so as strikeouts,
-    p.G as games_played,
-    b.hr as homeruns,
-    b.G as games_played_batting
-from pitching p
-left join batting b on p.playerid = b.playerid and p.yearid = b.yearid
-where p.yearid = 2016 
-
-
-
-select 
-	(floor(p.yearid / 10) * 10) as decade,
-	round(avg(case 
-		when p.so > 0 and p.g > 0 then p.so / nullif(p.g, 0)
-		else null end), 2) as avg_so,
-	round(avg(case
-		when b.hr > 0 and b.g > 0 then b.hr / nullif(b.g, 0)
-		else null end), 2) as avg_hr
-from pitching p
-left join batting b on p.playerid = b.playerid and p.yearid = b.yearid 
-where p.yearid >= 1920 and b.hr > 0 and 
-group by decade
-order by decade;
-		
-select playerid, yearid, hr, g, hr / nullif(g, 0) as hr_per_game
-from batting
-where hr > 0 and g > 0
-order by hr desc
-limit 1000;
-
-select count(*)
-from batting
-where hr > 0 and g > 0;
-
+	select 
+		yearid, 
+		sum(so) * 1.0 / (sum(g) / 2) as lg_so_per_g,
+		sum(hr) * 1.0 / (sum(g) / 2) as lg_hr_per_g
+	from teams
+	where yearid >= 1920
+	group by yearid 
+) as league_totals	
+group by floor(yearid / 10) * 10 
+order by decade desc;
 
 
 -- 6. Find the player who had the most success stealing bases in 2016, where __success__ is measured as the percentage of stolen base attempts which are successful. (A stolen base attempt results either in a stolen base or being caught stealing.) Consider only players who attempted _at least_ 20 stolen bases.
-	
+
+select 
+	p.namefirst as namefirst,
+	p.namelast as namelast,
+	concat(round(sum(b.sb) * 100.0 / (sum(b.sb) + 
+	sum(b.cs)), 2), '%') as sb_success
+from batting b 
+join people p on b.playerid = p.playerid
+where 
+	b.yearid = 2016
+	and (b.sb + b.cs) >= 20
+group by b.playerid, p.namefirst, p.namelast
+order by sb_success desc
+limit 1;
+
 
 -- 7.  From 1970 – 2016, what is the largest number of wins for a team that did not win the world series? What is the smallest number of wins for a team that did win the world series? Doing this will probably result in an unusually small number of wins for a world series champion – determine why this is the case. Then redo your query, excluding the problem year. How often from 1970 – 2016 was it the case that a team with the most wins also won the world series? What percentage of the time?
+
+select 
+	yearid, wswin, name, w
+from teams	
+where yearid between 1970 and 2016
+and wswin = 'N'
+order by w desc
+limit 1;
+
+select 
+	yearid, wswin, name, w
+from teams	
+where yearid between 1970 and 2016
+and wswin = 'Y'
+order by w
+limit 1;
+
+-- Answer: 1981 season was shortened due to a players strike
+
+select 
+	yearid, wswin, name, w
+from teams	
+where yearid between 1970 and 2016
+and wswin = 'Y'
+and yearid <> 1981
+order by w
+limit 1;
+
+
+with mostwins as (
+	select yearid, max(w) as max_wins
+	from teams
+	where yearid between 1970 and 2016
+	and yearid <> 1981
+	group by yearid
+),
+wswinners as (
+	select 
+		t.yearid, t.teamid, t.name as team_name, t.w as wins,
+		case 
+			when t.wswin = 'Y' then 1
+			else 0
+	end as occurence	
+	from teams t
+	join mostwins m on t.yearid = m.yearid and t.w = m.max_wins
+)
+select
+	sum(occurence) as occurences,
+	count(distinct yearid) as ws,
+	round(sum(occurence) * 100.0 / count(distinct yearid), 2) as percentage
+from wswinners;
 
 
 -- 8. Using the attendance figures from the homegames table, find the teams and parks which had the top 5 average attendance per game in 2016 (where average attendance is defined as total attendance divided by number of games). Only consider parks where there were at least 10 games played. Report the park name, team name, and average attendance. Repeat for the lowest 5 average attendance.
 
+with attendance2016 as (
+	select 
+		h.park, h.team, 
+		sum(h.attendance) as total_attendance,
+		sum(h.games) as total_games,
+		sum(h.attendance) * 1.0 / sum(h.games) as avg_attendance 
+	from homegames h
+	where h.year = 2016
+	group by h.park, h.team
+	having sum(h.games) >= 10
+)
+select 
+	p.park_name,
+	t.name as team_name,
+	round(a.avg_attendance, 0) as avg_attendance
+from attendance2016 a 
+join parks p on a.park = p.park
+join teams t on a.team = t.teamid
+and t.yearid = 2016
+order by a.avg_attendance desc 
+limit 5;
+
+----
+
+with attendance2016 as (
+	select 
+		h.park, h.team, 
+		sum(h.attendance) as total_attendance,
+		sum(h.games) as total_games,
+		sum(h.attendance) * 1.0 / sum(h.games) as avg_attendance 
+	from homegames h
+	where h.year = 2016
+	group by h.park, h.team
+	having sum(h.games) >= 10
+)
+select 
+	p.park_name,
+	t.name as team_name,
+	round(a.avg_attendance, 0) as avg_attendance
+from attendance2016 a 
+join parks p on a.park = p.park
+join teams t on a.team = t.teamid
+and t.yearid = 2016
+order by a.avg_attendance asc
+limit 5;
+
 
 -- 9. Which managers have won the TSN Manager of the Year award in both the National League (NL) and the American League (AL)? Give their full name and the teams that they were managing when they won the award.
 
+with tsnwinners as (
+	select distinct
+		am.playerid, am.lgid, t.name as team_name
+	from awardsmanagers am	
+	join managers m on am.playerid = m.playerid
+	and  am.yearid = m.yearid
+	join teams t on m.teamid = t.teamid
+	and m.yearid = t.yearid
+	where am.awardid = 'TSN Manager of the Year'
+	and am.lgid in ('AL', 'NL')
+)
+select 	
+	concat(p.namefirst, ' ', p.namelast) as full_name,
+	tw.team_name, tw.lgid
+from tsnwinners tw
+join people p on tw.playerid = p.playerid
+where tw.playerid in(
+	select playerid
+	from tsnwinners
+	group by playerid
+	having count(distinct lgid) = 2
+)
+order by full_name, lgid;
+
+
 -- 10. Find all players who hit their career highest number of home runs in 2016. Consider only players who have played in the league for at least 10 years, and who hit at least one home run in 2016. Report the players' first and last names and the number of home runs they hit in 2016.
+
+with playercareerhr as (
+	select
+		playerid, sum(hr) as career_hr
+	from batting
+	group by playerid
+),
+player2016hr as (
+	select
+		playerid, sum(hr) as hr_2016
+	from batting
+	where yearid = 2016
+	group by playerid
+	having sum(hr) >= 1
+),
+playeryearsplayed as (
+	select
+		playerid,
+		count(distinct yearid) as years_played
+	from batting
+	group by playerid
+	having count(distinct yearid) >= 10
+)
+select 
+	p.namefirst as first_name,
+	p.namelast as last_name,
+	ph.hr_2016 as hr_2016
+from player2016hr ph
+join playercareerhr pc on ph.playerid = pc.playerid
+join playeryearsplayed py on ph.playerid = py.playerid
+join people p on ph.playerid = p.playerid
+where ph.hr_2016 = pc.career_hr
+order by hr_2016 desc;
+
+
 
 
 -- **Open-ended questions**
