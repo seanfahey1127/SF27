@@ -311,9 +311,7 @@ playeryearsinleague as (
     having count(distinct yearid) >= 10
 )
 select
-    p.namefirst as firstname,
-    p.namelast as lastname,
-    ph.hr2016 as homeruns2016
+    p.namefirst, p.namelast, ph.hr2016 
 from people p
 join player2016hr ph on p.playerid = ph.playerid
 join playercareerhr pch on p.playerid = pch.playerid
@@ -325,71 +323,159 @@ where ph.hr2016 = pch.careermaxhr;
 
 -- 11. Is there any correlation between number of wins and team salary? Use data from 2000 and later to answer this question. As you do this analysis, keep in mind that salaries across the whole league tend to increase together, so you may want to look on a year-by-year basis.
 
+-- There is an overall positive trend; however, variations over the years play a significant role in shaping that trend. Notably, a peak was observed at 85 wins, with attendance reaching 231,978,889 in 2013 for the New York Yankees.
+
 select
-    t.yearid as year,
-    t.teamid as team,
-    t.w as wins,
+    t.yearid, t.name, t.w, 
     sum(s.salary) as total_salary
 from teams t
 join salaries s on t.yearid = s.yearid and t.teamid = s.teamid
 where t.yearid >= 2000
-group by t.yearid, t.teamid, t.w
-order by t.yearid, t.teamid
-
-
-select
-    t.yearid as year,
-    t.teamid as team,
-    t.w as wins,
-    sum(s.salary) as total_salary
-from teams t
-join salaries s on t.yearid = s.yearid and t.teamid = s.teamid
-where t.yearid >= 2000
-and t.w > 70
-group by t.yearid, t.teamid, t.w
+group by t.yearid, t.name, t.w
 order by t.w
-
-
-select
-    t.yearid as year,
-    t.teamid as team,
-    t.w as wins,
-    sum(s.salary) as total_salary
-from teams t
-join salaries s on t.yearid = s.yearid and t.teamid = s.teamid
-where t.yearid >= 2000
-group by t.yearid, t.teamid, t.w
-order by t.w
-
--- There's an overall postive trend but years over time play into that. I did notice a peak at 85 wins with 231,978,889 in 2013 with the New York Yankees.
-
 
 
 -- 12. In this question, you will explore the connection between number of wins and attendance.
-
-
-
 --     <ol type="a">
 --       <li>Does there appear to be any correlation between attendance at home games and number of wins? </li>
 
+-- Yes, an upward trend is evident after generating a graph visualizer for the provided code.
+
 select
-    yearid as year,
-    teamid as team,
-    w as wins,
-    attendance as home_attendance
+    yearid, teamid, w, attendance 
 from teams
 where attendance is not null
-and w > 50
-and yearid > 1950
-order by w, yearid 
+order by w
 
 
 --       <li>Do teams that win the world series see a boost in attendance the following year? What about teams that made the playoffs? Making the playoffs means either being a division winner or a wild card winner.</li>
 --     </ol>
+
+-- After analyzing the graph generated for the query, it is evident that attendance for teams winning the World Series varied from year to year. Out of the 111 teams included in the data, 54 showed a negative trend in attendance the following year, while 57 exhibited a positive trend.
+
+-- Regarding playoff appearances, results were only available for "divwins" from 1969 onward, as previous years did not have a recorded "Y" or "N" in that column. Additionally, the concept of a wildcard win ("wcwin") was introduced to Major League Baseball (MLB) in 1994.
+
+-- Of the 279 teams analyzed, 117 demonstrated a negative trend in attendance the following year, while the remaining 162 showed a positive trend. 
+
+
+with wswinners as (
+	select wswin, yearid, teamid, attendance
+	from teams 
+	where wswin = 'Y'
+	and attendance is not null)
+select 
+	w.yearid,
+	t.name,
+	w.attendance as ws_attendance,
+	t.attendance as next_year_attendance,
+	round(((t.attendance - w. attendance) * 1.0 / w.attendance * 100), 2) as per_change
+from wswinners w 
+join teams t on w.teamid = t.teamid
+and w.yearid + 1 = t.yearid
+where t.attendance is not null
+
+---
+
+with wswinners as (
+	select wswin, yearid, teamid, attendance
+	from teams 
+	where wswin = 'Y'
+	and attendance is not null)
+select 
+	w.yearid,
+	t.name,
+	w.attendance as ws_attendance,
+	t.attendance as next_year_attendance,
+	round(((t.attendance - w. attendance) * 1.0 / w.attendance * 100), 2) as per_change
+from wswinners w 
+join teams t on w.teamid = t.teamid
+and w.yearid + 1 = t.yearid
+where t.attendance is not null
+order by per_change 
+
+---
+
+with made_playoffs as (
+	select yearid, teamid, attendance, divwin, wcwin
+	from teams 
+	where attendance is not null
+	and divwin = 'Y' or wcwin = 'Y')
+select 
+	p.yearid,
+	t.name,
+	p.attendance as p_attendance,
+	t.attendance as next_year_attendance,
+	round(((t.attendance - p. attendance) * 1.0 / p.attendance * 100), 2) as per_change
+from made_playoffs p 
+join teams t on p.teamid = t.teamid
+and p.yearid + 1 = t.yearid
+where t.attendance is not null
+order by per_change 
 
 
 
 
 -- 13. It is thought that since left-handed pitchers are more rare, causing batters to face them less often, that they are more effective. Investigate this claim and present evidence to either support or dispute this claim. First, determine just how rare left-handed pitchers are compared with right-handed pitchers. Are left-handed pitchers more likely to win the Cy Young Award? Are they more likely to make it into the hall of fame?
 
-  
+-- The dataset includes 6,513 right-handed pitchers and 2,468 left-handed pitchers.
+-- Of these, 53 right-handed pitchers and 24 left-handed pitchers have earned a Cy Young Award.
+-- Furthermore, 78 right-handed pitchers and 23 left-handed pitchers are Hall of Famers.
+-- This likely reflects the broader trend that the majority of the population is right-handed.
+
+select distinct
+	p.namelast, p.namefirst, p.throws, f.pos
+from people p
+join fielding f on p.playerid = f.playerid
+where p.throws = 'L' and f.pos = 'P'
+order by p.namelast
+
+select distinct
+	p.namelast, p.namefirst, p.throws, f.pos
+from people p
+join fielding f on p.playerid = f.playerid
+where p.throws = 'R' and f.pos = 'P'
+order by p.namelast
+
+--
+
+select distinct
+	p.namelast, p.namefirst, p.throws, f.pos, a.awardid
+from people p
+join fielding f on p.playerid = f.playerid
+join awardsplayers a on p.playerid = a.playerid
+where p.throws = 'L'
+and f.pos = 'P' and a.awardid = 'Cy Young Award'
+order by p.namelast
+
+select distinct
+	p.namelast, p.namefirst, p.throws, f.pos, a.awardid
+from people p
+join fielding f on p.playerid = f.playerid
+join awardsplayers a on p.playerid = a.playerid
+where p.throws = 'R'
+and f.pos = 'P' and a.awardid = 'Cy Young Award'
+order by p.namelast
+
+--
+
+select distinct
+	p.namelast, p.namefirst, p.throws, f.pos, h.inducted
+from people p
+join fielding f on p.playerid = f.playerid
+join halloffame h on p.playerid = h.playerid
+where p.throws = 'L' and f.pos = 'P' and h.inducted = 'Y'
+order by p.namelast
+
+select distinct
+	p.namelast, p.namefirst, p.throws, f.pos, h.inducted
+from people p
+join fielding f on p.playerid = f.playerid
+join halloffame h on p.playerid = h.playerid
+where p.throws = 'R' and f.pos = 'P' and h.inducted = 'Y'
+order by p.namelast
+
+
+
+
+
+
